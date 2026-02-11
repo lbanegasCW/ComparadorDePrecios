@@ -895,7 +895,10 @@ BEGIN
                                 nro_marca          INT            NOT NULL,
                                 nro_tipo_producto  INT            NOT NULL,
                                 precio             DECIMAL(10,2)  NOT NULL,
-                                vigente            BIT            NULL
+                                vigente            BIT            NULL,
+                                tipo_promocion           NVARCHAR(30)   NULL,
+                                precio_promocion         DECIMAL(10,2)  NULL,
+                                fin_vigencia_promocion   DATETIME2(0)   NULL
                             );
 
         IF UPPER(@formato) = 'REST'
@@ -938,8 +941,8 @@ BEGIN
 
                 /* PATRÓN SEGURO: un solo nodes() y solo .value() */
                 INSERT INTO @items
-                (nro_sucursal, cod_barra, nom_producto, desc_producto, nro_categoria,
-                 imagen, nro_marca, nro_tipo_producto, precio, vigente)
+                (nro_sucursal, cod_barra, nom_producto, desc_producto, nro_categoria, imagen,
+                 nro_marca, nro_tipo_producto, precio, vigente, tipo_promocion, precio_promocion, fin_vigencia_promocion)
                 SELECT
                     PX.p.value('(./*[local-name()="nro_sucursal"]/text())[1]','INT'),
                     PX.p.value('(./*[local-name()="cod_barra"]/text())[1]','NVARCHAR(50)'),
@@ -950,7 +953,10 @@ BEGIN
                     PX.p.value('(./*[local-name()="nro_marca"]/text())[1]','INT'),
                     PX.p.value('(./*[local-name()="nro_tipo_producto"]/text())[1]','INT'),
                     TRY_CAST(PX.p.value('(./*[local-name()="precio"]/text())[1]','NVARCHAR(64)') AS DECIMAL(10,2)),
-                    TRY_CONVERT(BIT, PX.p.value('string(./*[local-name()="vigente"][1])','NVARCHAR(10)'))
+                    TRY_CONVERT(BIT, PX.p.value('string(./*[local-name()="vigente"][1])','NVARCHAR(10)')),
+                    PX.p.value('(./*[local-name()="tipo_promocion"]/text())[1]','NVARCHAR(30)'),
+                    TRY_CAST(PX.p.value('(./*[local-name()="precio_promocion"]/text())[1]','NVARCHAR(64)') AS DECIMAL(10,2)),
+                    TRY_CONVERT(DATETIME2(0), PX.p.value('string(./*[local-name()="fin_vigencia_promocion"][1])','NVARCHAR(40)'), 127)
                 FROM (SELECT @x AS x) AS T
                          CROSS APPLY T.x.nodes('//*[local-name()="productosSucursales"]/*[local-name()="productoSucursal"]') AS PX(p);
             END
@@ -1004,6 +1010,38 @@ BEGIN
             VALUES (src.nro_supermercado, src.nro_sucursal, src.cod_barra, src.precio, SYSUTCDATETIME())
         WHEN MATCHED AND (tgt.precio <> src.precio)
             THEN UPDATE SET tgt.precio = src.precio, tgt.fecha_ult_actualizacion = SYSUTCDATETIME();
+
+        /* UPSERT promociones por supermercado/sucursal/producto */
+        MERGE dbo.productos_sucursales_promociones AS tgt
+            USING (
+                SELECT
+                    @nro_supermercado AS nro_supermercado,
+                    i.nro_sucursal,
+                    i.cod_barra,
+                    i.tipo_promocion,
+                    i.precio_promocion AS precio,
+                    CAST(i.fin_vigencia_promocion AS DATETIME) AS fin_vigencia
+                    FROM @items i
+                WHERE i.vigente = 1
+                    AND i.tipo_promocion IS NOT NULL
+                    AND i.precio_promocion IS NOT NULL
+                    AND i.fin_vigencia_promocion IS NOT NULL
+                ) AS src
+                    ON  tgt.nro_supermercado = src.nro_supermercado
+                    AND tgt.nro_sucursal     = src.nro_sucursal
+                    AND tgt.cod_barra        = src.cod_barra
+                WHEN NOT MATCHED THEN
+            INSERT (nro_supermercado, nro_sucursal, cod_barra, tipo_promocion, precio, fin_vigencia)
+            VALUES (src.nro_supermercado, src.nro_sucursal, src.cod_barra, src.tipo_promocion, src.precio, src.fin_vigencia)
+            WHEN MATCHED AND (
+                ISNULL(LTRIM(RTRIM(tgt.tipo_promocion)),'') <> ISNULL(LTRIM(RTRIM(src.tipo_promocion)),'')
+                OR ISNULL(tgt.precio, 0)                       <> ISNULL(src.precio, 0)
+                OR ISNULL(tgt.fin_vigencia,'19000101')         <> ISNULL(src.fin_vigencia,'19000101')
+            )
+            THEN UPDATE SET
+                     tgt.tipo_promocion = src.tipo_promocion,
+                     tgt.precio         = src.precio,
+                     tgt.fin_vigencia   = src.fin_vigencia;
 
         COMMIT;
 

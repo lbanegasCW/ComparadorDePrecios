@@ -190,6 +190,17 @@ CREATE TABLE dbo.productos_sucursales
     CONSTRAINT CHK_precio_positivo CHECK (precio > 0)
 );
 
+CREATE TABLE dbo.productos_promociones
+(
+    nro_promocion int PRIMARY KEY IDENTITY(1,1),
+    cod_barra varchar(50) NOT NULL,
+    tipo_promocion varchar(50) NOT NULL,
+    precio decimal(10,2) NOT NULL,
+    fin_vigencia DATETIME NOT NULL,
+    FOREIGN KEY (cod_barra) REFERENCES dbo.productos(cod_barra),
+    CONSTRAINT CHK_precio_promocion CHECK (precio > 0)
+);
+
 GO
 
 /* -------------------------------------
@@ -270,7 +281,16 @@ BEGIN
         t.nro_tipo_producto,
         t.nom_tipo_producto,
         ps.precio,
-        ps.vigente
+        ps.vigente,
+        (
+            SELECT
+                pp.tipo_promocion,
+                pp.precio,
+                pp.fin_vigencia
+            FROM dbo.productos_promociones AS pp
+            WHERE p.cod_barra = pp.cod_barra
+            FOR XML PATH('promocion'), ROOT('promociones'), TYPE
+        ) AS 'Promociones'
     FROM dbo.productos_sucursales ps
              INNER JOIN dbo.productos p
                         ON ps.cod_barra = p.cod_barra
@@ -598,6 +618,18 @@ INSERT INTO @precios(cod_barra, precio) VALUES
 INSERT INTO dbo.productos_sucursales(nro_sucursal, cod_barra, precio)
 SELECT s.nro_sucursal, p.cod_barra, p.precio
 FROM dbo.sucursales s CROSS JOIN @precios p;
+
+INSERT INTO dbo.productos_promociones (cod_barra, tipo_promocion, precio, fin_vigencia)
+VALUES ('100000000021', '50% Off', 4450.50, '2026-03-31 23:59:59');
+
+INSERT INTO dbo.productos_promociones (cod_barra, tipo_promocion, precio, fin_vigencia)
+VALUES ('100000000073', '2X1', 2190.00, '2026-04-15 18:00:00');
+
+INSERT INTO dbo.productos_promociones (cod_barra, tipo_promocion, precio, fin_vigencia)
+VALUES ('100000000057', 'Productos Cuidados', 500.00, '2026-06-01 00:00:00');
+
+INSERT INTO dbo.productos_promociones (cod_barra, tipo_promocion, precio, fin_vigencia)
+VALUES ('100000000005', 'HOT Sale', 1500.00, '2026-02-15 23:59:59');
 
 COMMIT TRANSACTION;
 END TRY

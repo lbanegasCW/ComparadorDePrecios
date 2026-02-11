@@ -8,6 +8,10 @@ services:
       - "5005:5005"
     depends_on:
       - sqlserver
+      - api-super1
+      - api-super2
+      - api-super3
+      - api-super4
     env_file:
       - ./.env/api-indec.env
     volumes:

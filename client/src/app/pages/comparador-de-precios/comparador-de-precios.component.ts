@@ -37,6 +37,7 @@ export class ComparadorPreciosComponent implements OnInit {
   vmRows: VmRow[] = [];
 
   totalBySup: Record<SupermarketId, number> = {};
+  isCompleteBySup: Record<SupermarketId, boolean> = {};
   cheapestSupId: SupermarketId | null = null;
 
   constructor() {
@@ -92,6 +93,15 @@ export class ComparadorPreciosComponent implements OnInit {
 
   trackCol = (_: number, id: SupermarketId): SupermarketId => id;
   trackRow = (_: number, row: VmRow): string => row.codBarra;
+
+  formatPrice(value: number): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
 
   private loadSupermarkets(): void {
     this.indec.getSupermercados().subscribe({
@@ -157,17 +167,21 @@ export class ComparadorPreciosComponent implements OnInit {
 
   private computeTotals(): void {
     this.totalBySup = Object.fromEntries(this.colIds.map((id) => [id, 0]));
+    this.isCompleteBySup = Object.fromEntries(this.colIds.map((id) => [id, true]));
 
     for (const row of this.vmRows) {
       for (const id of this.colIds) {
         const price = row.pricesBySup[id];
         if (typeof price === 'number') {
           this.totalBySup[id] += price;
+        } else {
+          this.isCompleteBySup[id] = false;
         }
       }
     }
 
     this.cheapestSupId = this.colIds.reduce<SupermarketId | null>((winnerId, id) => {
+      if (!this.isCompleteBySup[id]) return winnerId;
       if (winnerId === null) return id;
       return this.totalBySup[id] < this.totalBySup[winnerId] ? id : winnerId;
     }, null);
@@ -177,6 +191,7 @@ export class ComparadorPreciosComponent implements OnInit {
     this.vmRows = [];
     this.colIds = [];
     this.totalBySup = {};
+    this.isCompleteBySup = {};
     this.cheapestSupId = null;
     this.loading = false;
   }

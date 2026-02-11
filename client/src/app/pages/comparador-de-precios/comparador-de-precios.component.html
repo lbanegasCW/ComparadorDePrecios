@@ -1,56 +1,101 @@
+<div class="bg-white shadow">
+  <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <h1 class="text-3xl font-bold text-gray-900" i18n="@@catalogo.title">
+      Comparador de precios
+    </h1>
+  </div>
+</div>
+
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-  <div *ngIf="loading()" class="text-gray-600 mb-3" i18n="@@comparador.loading">Cargando comparación…</div>
-  <div *ngIf="errorMsg()" class="mb-3 rounded border border-red-300 bg-red-50 p-3 text-red-900">
-    {{ errorMsg() }}
+
+  <div *ngIf="loading" class="text-gray-600 mb-3">
+    Cargando comparación…
   </div>
 
-  <div class="overflow-x-auto bg-white border rounded-lg" *ngIf="!loading() && rows.length">
-    <table class="min-w-full text-sm">
-      <thead class="bg-gray-50">
+  <div *ngIf="errorMsg" class="mb-3 rounded border border-red-300 bg-red-50 p-3 text-red-900">
+    {{ errorMsg }}
+  </div>
+
+  <div class="overflow-x-auto bg-white rounded-xl shadow border border-gray-200"
+       *ngIf="!loading && vmRows.length">
+
+    <table class="min-w-full text-sm text-gray-700">
+
+      <thead class="bg-blue-50 border-b border-blue-200">
       <tr>
-        <th class="text-left px-3 py-2 w-1/3" i18n="@@comparador.th_producto">Producto</th>
-        <th class="text-left px-3 py-2" i18n="@@comparador.th_categoria">Categoría</th>
-        <!-- <th class="px-3 py-2" *ngFor="let id of colIds(); trackBy: trackCol">
-          {{ supName(id) }}
+        <th class="text-left px-4 py-3 font-semibold">Producto</th>
+        <th class="text-left px-4 py-3 font-semibold">Categoría</th>
+
+        <th class="px-4 py-3 text-center font-semibold"
+            *ngFor="let id of colIds; trackBy: trackCol"
+            [class.bg-green-200]="id === cheapestSupId">
+          <div class="flex items-center justify-center gap-2">
+            <span>{{ supName(id) }}</span>
+            <span *ngIf="id === cheapestSupId"
+                  class="text-[11px] px-2 py-[2px] rounded-full bg-green-600 text-white">
+                🏆 Más barato
+              </span>
+          </div>
         </th>
-        -->
       </tr>
       </thead>
 
       <tbody>
-      <tr *ngFor="let r of rows; let i = index;" class="border-t">
-        <td class="px-3 py-2 align-top">
-          <div class="font-medium text-gray-900">{{ r.nomProducto }}</div>
-          <div class="text-xs text-gray-500">EAN {{ r.codBarra }}</div>
-          <!-- DEBUG: ver exactamente qué trae r -->
-          <pre class="text-[10px] text-gray-500 bg-gray-50 border mt-1 p-1 overflow-auto">
-            {{ r | json }}
-          </pre>
+      <tr *ngFor="let r of vmRows; trackBy: trackRow"
+          class="border-b last:border-none even:bg-gray-50 hover:bg-blue-50 transition">
+
+        <td class="px-4 py-3 align-top">
+          <div class="font-semibold text-gray-900">
+            {{ r.nomProducto }}
+          </div>
+          <div class="text-xs text-gray-500">
+            EAN {{ r.codBarra }}
+          </div>
         </td>
-        <td class="px-3 py-2 align-top">
+
+        <td class="px-4 py-3 align-top text-gray-600">
           {{ r.nomCategoria }}
         </td>
 
-        <!-- columnas dinámicas por supermercado
-        <td class="px-3 py-2 text-center" *ngFor="let id of colIds(); trackBy: trackCol">
-          <ng-container [ngSwitch]="priceFor(r, id)">
-            <span *ngSwitchCase="null" class="text-gray-400">—</span>
+        <td class="px-4 py-3 text-center"
+            *ngFor="let id of colIds; trackBy: trackCol"
+            [class.bg-green-50]="id === cheapestSupId">
 
-            <span *ngSwitchDefault
-                  class="inline-block px-2 py-1 rounded border"
-                  [class.bg-green-50]="minPrice(r) !== null && priceFor(r, id) === minPrice(r)"
-                  [class.border-green-300]="minPrice(r) !== null && priceFor(r, id) === minPrice(r)">
-                  {{ priceFor(r, id)! | currency:'ARS':'symbol':'1.2-2':'es-AR' }}
-            </span>
+          <ng-container *ngIf="r.pricesBySup[id] !== null && r.pricesBySup[id] !== undefined; else sinPrecio">
+              <span class="inline-flex items-center justify-center px-3 py-1 rounded-lg font-semibold border"
+                    [class.bg-green-100]="r.min !== null && r.pricesBySup[id] === r.min"
+                    [class.border-green-300]="r.min !== null && r.pricesBySup[id] === r.min"
+                    [class.text-green-700]="r.min !== null && r.pricesBySup[id] === r.min">
+                {{ r.pricesBySup[id] }}
+              </span>
           </ng-container>
+
+          <ng-template #sinPrecio>
+            <span class="text-gray-300">—</span>
+          </ng-template>
+
         </td>
-        -->
       </tr>
+
+      <!-- TOTAL -->
+      <tr class="bg-gray-100 border-t border-gray-300 font-semibold">
+        <td class="px-4 py-3 text-gray-900" colspan="2">
+          TOTAL
+        </td>
+
+        <td class="px-4 py-3 text-center"
+            *ngFor="let id of colIds; trackBy: trackCol"
+            [class.bg-green-100]="id === cheapestSupId">
+          {{ totalBySup[id] ?? 0 }}
+        </td>
+      </tr>
+
       </tbody>
     </table>
   </div>
 
-  <div *ngIf="!loading() && !rows.length && !errorMsg()" class="text-gray-500" i18n="@@comparador.sin_resultados">
+  <div *ngIf="!loading && !vmRows.length && !errorMsg" class="text-gray-500">
     No hay resultados para comparar. Verificá que tu carrito tenga productos disponibles en la localidad.
   </div>
+
 </div>

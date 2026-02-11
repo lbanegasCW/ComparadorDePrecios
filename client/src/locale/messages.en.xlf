@@ -231,7 +231,7 @@
       </trans-unit>
       <trans-unit id="catalogo.count_resultados" datatype="html">
         <source>{totalResultados, plural, =0 {0 resultados} =1 {1 resultado} other {<x id="INTERPOLATION" equiv-text="# resultados"/> resultados}}</source>
-        <target>{totalResultados, plural, =0 {0 results} =1 {1 result} other {<x id="INTERPOLATION" equiv-text="# resultados"/> results}}</target>
+        <target>{VAR_PLURAL, plural, =0 {0 results} =1 {1 result} other {# results}}</target>
       </trans-unit>
       <trans-unit id="catalogo.badge_rubro_filtrado" datatype="html">
         <source> · Rubro filtrado</source>

@@ -54,7 +54,13 @@ export interface Sucursal {
 
 export interface ComparadorOferta {
   nroSupermercado: number;
+  nroSucursal?: number | null;
   precio: number;
+  precioLista?: number | null;
+  precioFinal?: number | null;
+  tipoPromocion?: string | null;
+  precioPromocion?: number | null;
+  finVigencia?: string | null;
 }
 export interface ComparadorRow {
   codBarra: string;
@@ -130,13 +136,41 @@ export class IndecService {
       if (!json) return [];
       const arr = JSON.parse(json);
       if (!Array.isArray(arr)) return [];
-      return arr.map((o: any) => ({
-        nroSupermercado: Number(o.nroSupermercado),
-        precio: Number(o.precio),
-      }));
+      return arr
+        .map((o: any) => {
+          const precio = this.parseComparablePrice(o);
+          if (precio === null) return null;
+
+          return {
+            nroSupermercado: Number(o.nroSupermercado),
+            nroSucursal: this.toNumberOrNull(o.nroSucursal),
+            precio,
+            precioLista: this.toNumberOrNull(o.precioLista),
+            precioFinal: this.toNumberOrNull(o.precioFinal),
+            tipoPromocion: typeof o.tipoPromocion === 'string' ? o.tipoPromocion : null,
+            precioPromocion: this.toNumberOrNull(o.precioPromocion),
+            finVigencia: typeof o.finVigencia === 'string' ? o.finVigencia : null,
+          } as ComparadorOferta;
+        })
+        .filter((offer): offer is ComparadorOferta => offer !== null);
     } catch {
       return [];
     }
+  }
+
+  private parseComparablePrice(offer: any): number | null {
+    const precio = this.toNumberOrNull(offer?.precio);
+    if (precio !== null) return precio;
+
+    const precioFinal = this.toNumberOrNull(offer?.precioFinal);
+    if (precioFinal !== null) return precioFinal;
+
+    return this.toNumberOrNull(offer?.precioLista);
+  }
+
+  private toNumberOrNull(value: unknown): number | null {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   // IndecService

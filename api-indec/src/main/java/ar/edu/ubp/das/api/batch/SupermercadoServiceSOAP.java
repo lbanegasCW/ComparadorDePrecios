@@ -6,13 +6,28 @@ import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.Marshaller;
 
 import java.io.StringWriter;
+ import java.util.Collections;
+import java.util.List;
 
 public class SupermercadoServiceSOAP implements SupermercadoService {
-    private static final String NAMESPACE_SUPER1 = "http://services.super1.das.ubp.edu.ar/";
-    private static final String NAMESPACE_SUPER3 = "http://services.super3.das.ubp.edu.ar/";
-
     final String SERVICIO_SUCURSALES = "sucursales.wsdl";
     final String SERVICIO_PRODUCTOS = "productos.wsdl";
+
+    private enum NsByUser {
+        CARREFOUR("http://services.super1.das.ubp.edu.ar/"),
+        LIBERTAD("http://services.super3.das.ubp.edu.ar/");
+
+        final String ns;
+        NsByUser(String ns) { this.ns = ns; }
+
+        static String of(String user) {
+            return valueOf(user.trim().toUpperCase()).ns;
+        }
+    }
+
+    private static String ns(String user) {
+        return NsByUser.of(user);
+    }
 
     @Override
     public String obtenerSucursales(String endpoint, String user, String pass) {
@@ -20,7 +35,7 @@ public class SupermercadoServiceSOAP implements SupermercadoService {
         try {
             SOAPClient client = new SOAPClient.SOAPClientBuilder()
                     .wsdlUrl(wsdl)
-                    .namespace(resolveNamespace(endpoint))
+                    .namespace(ns(user))
                     .serviceName("SucursalesPortService")
                     .portName("SucursalesPortSoap12")
                     .operationName("obtenerSucursales")
@@ -46,7 +61,7 @@ public class SupermercadoServiceSOAP implements SupermercadoService {
         try {
             SOAPClient client = new SOAPClient.SOAPClientBuilder()
                     .wsdlUrl(wsdl)
-                    .namespace(resolveNamespace(endpoint))
+                    .namespace(ns(user))
                     .serviceName("ProductosPortService")
                     .portName("ProductosPortSoap12")
                     .operationName("obtenerProductos")
@@ -78,16 +93,6 @@ public class SupermercadoServiceSOAP implements SupermercadoService {
         } catch (Exception e) {
             throw new RuntimeException("Error marshalling XML", e);
         }
-    }
-
-    private String resolveNamespace(String endpoint) {
-        if (endpoint == null) {
-            return NAMESPACE_SUPER1;
-        }
-        if (endpoint.contains("api-super3") || endpoint.contains(":8083")) {
-            return NAMESPACE_SUPER3;
-        }
-        return NAMESPACE_SUPER1;
     }
 
 }

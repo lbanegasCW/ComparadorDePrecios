@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, effect, inject } from '@angular/core';
 import {
+  ComparadorOferta,
   ComparadorRow,
   IndecService,
   Supermercado,
@@ -9,10 +10,15 @@ import { CartCodesService } from '@/app/services/cart-codes.service';
 import { LocalizacionStore } from '@/app/store/localizacion.store';
 
 type SupermarketId = number;
-type PriceValue = number | string | null;
+
+interface PriceCell {
+  value: number;
+  promotionName: string | null;
+  promotionPrice: number | null;
+}
 
 interface VmRow extends ComparadorRow {
-  pricesBySup: Record<SupermarketId, PriceValue>;
+  pricesBySup: Record<SupermarketId, PriceCell | null>;
   min: number | null;
 }
 
@@ -95,6 +101,10 @@ export class ComparadorPreciosComponent implements OnInit {
   trackCol = (_: number, id: SupermarketId): SupermarketId => id;
   trackRow = (_: number, row: VmRow): string => row.codBarra;
 
+  getPrice(row: VmRow, supermarketId: SupermarketId): PriceCell | null {
+    return row.pricesBySup[supermarketId] ?? null;
+  }
+
   formatPrice(value: number): string {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -143,15 +153,15 @@ export class ComparadorPreciosComponent implements OnInit {
     return [...ids].sort((a, b) => a - b);
   }
 
-  private buildPriceMap(row: ComparadorRow): Record<SupermarketId, PriceValue> {
+  private buildPriceMap(row: ComparadorRow): Record<SupermarketId, PriceCell | null> {
     const pricesBySup = Object.fromEntries(
       this.colIds.map((id) => [id, null])
-    ) as Record<SupermarketId, PriceValue>;
+    ) as Record<SupermarketId, PriceCell | null>;
 
     for (const offer of row.ofertas ?? []) {
       const id = Number(offer.nroSupermercado);
       if (Number.isFinite(id)) {
-        pricesBySup[id] = offer.precio;
+        pricesBySup[id] = this.toPriceCell(offer);
       }
     }
 
@@ -159,13 +169,50 @@ export class ComparadorPreciosComponent implements OnInit {
   }
 
   private minPrice(
-    pricesBySup: Record<SupermarketId, PriceValue>
+    pricesBySup: Record<SupermarketId, PriceCell | null>
   ): number | null {
     const numericPrices = Object.values(pricesBySup).filter(
-      (value): value is number => typeof value === 'number'
-    );
+      (value): value is PriceCell => value !== null
+    ).map((value) => value.value);
 
     return numericPrices.length ? Math.min(...numericPrices) : null;
+  }
+
+  private toPriceCell(offer: ComparadorOferta): PriceCell {
+    return {
+      value: offer.precio,
+      promotionName: offer.tipoPromocion ?? null,
+      promotionPrice: offer.precioPromocion ?? null,
+    };
+  }
+
+  private hasNumericPrice(price: PriceCell | null): price is PriceCell {
+    return !!price && Number.isFinite(price.value);
+  }
+
+  isMinPrice(row: VmRow, supermarketId: SupermarketId): boolean {
+    const price = row.pricesBySup[supermarketId];
+    return !!price && row.min !== null && price.value === row.min;
+  }
+
+  showPromotionDetails(price: PriceCell | null): boolean {
+    if (!price) return false;
+    return !!price.promotionName || price.promotionPrice !== null;
+  }
+
+  promotionDescription(price: PriceCell | null): string {
+    if (!price) return '';
+
+    const promoName = price.promotionName?.trim();
+    const promoPrice =
+      price.promotionPrice !== null
+        ? this.formatPrice(price.promotionPrice)
+        : null;
+
+    if (promoName && promoPrice) return `${promoName} · ${promoPrice}`;
+    if (promoName) return promoName;
+    if (promoPrice) return promoPrice;
+    return '';
   }
 
   private computeTotals(): void {
@@ -182,8 +229,8 @@ export class ComparadorPreciosComponent implements OnInit {
       for (const id of this.colIds) {
         const price = row.pricesBySup[id];
 
-        if (typeof price === 'number') {
-          this.totalBySup[id] = this.totalBySup[id] + price;
+        if (this.hasNumericPrice(price)) {
+          this.totalBySup[id] = this.totalBySup[id] + price.value;
         } else {
           this.isCompleteBySup[id] = false;
         }

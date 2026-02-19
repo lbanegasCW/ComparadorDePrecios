@@ -1,42 +1,59 @@
-# LLAMADA DE EJEMPLO SUCURSALES
-http://localhost:8081/ws/sucursales.wsdl
+# API Super1 (SOAP)
 
+Servicio SOAP 1.2 para exponer sucursales y productos del supermercado 1.
+
+## Stack
+
+- Java 17
+- Spring Boot + Spring Web Services
+- SQL Server
+
+## Puerto y URL base
+
+- Puerto: `8081`
+- Base SOAP: `http://localhost:8081/ws`
+
+WSDLs:
+
+- Sucursales: `http://localhost:8081/ws/sucursales.wsdl`
+- Productos: `http://localhost:8081/ws/productos.wsdl`
+
+## Seguridad
+
+La API requiere `WS-Security UsernameToken`.
+
+- Usuario: `carrefour`
+- Password: `a5s1d7fg4`
+
+## Ejemplo SOAP (sucursales)
+
+```xml
 <soapenv:Envelope
     xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
     xmlns:web="http://services.super1.das.ubp.edu.ar/"
     xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
-    <soapenv:Header>
-        <wsse:Security>
-            <wsse:UsernameToken>
-                <wsse:Username>carrefour</wsse:Username>
-                <wsse:Password>a5s1d7fg4</wsse:Password>
-            </wsse:UsernameToken>
-        </wsse:Security>
-   </soapenv:Header>
-   <soapenv:Body>
-      <web:obtenerSucursales>
-      </web:obtenerSucursales>
-   </soapenv:Body>
+  <soapenv:Header>
+    <wsse:Security>
+      <wsse:UsernameToken>
+        <wsse:Username>carrefour</wsse:Username>
+        <wsse:Password>a5s1d7fg4</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+  </soapenv:Header>
+  <soapenv:Body>
+    <web:obtenerSucursales/>
+  </soapenv:Body>
 </soapenv:Envelope>
+```
 
+## Desarrollo local
 
-# LLAMADA DE EJEMPLO PRODUCTOS
-http://localhost:8081/ws/productos.wsdl
+```bash
+./mvnw spring-boot:run
+```
 
-<soapenv:Envelope
-    xmlns:soapenv="http://www.w3.org/2003/05/soap-envelope"
-    xmlns:web="http://services.super1.das.ubp.edu.ar/"
-    xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
-    <soapenv:Header>
-        <wsse:Security>
-            <wsse:UsernameToken>
-                <wsse:Username>carrefour</wsse:Username>
-                <wsse:Password>a5s1d7fg4</wsse:Password>
-            </wsse:UsernameToken>
-        </wsse:Security>
-   </soapenv:Header>
-   <soapenv:Body>
-      <web:obtenerProductos>
-      </web:obtenerProductos>
-   </soapenv:Body>
-</soapenv:Envelope>
+Con Docker (desde raíz del monorepo):
+
+```bash
+docker compose -f docker/dev/docker-compose.yml up -d api-super1
+```

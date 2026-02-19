@@ -1,27 +1,47 @@
-# Client
+# Client (Angular)
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.9.
+Frontend del comparador de precios, con soporte de internacionalización (español e inglés).
 
-## Development server
+## Stack
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- Angular 18
+- TypeScript
+- TailwindCSS
 
-## Code scaffolding
+## Requisitos locales (sin Docker)
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- Node.js 18+
+- npm
 
-## Build
+## Scripts principales
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+```bash
+npm install
+npm run start:es     # http://localhost:4200
+npm run start:en     # http://localhost:4201
+npm run build
+npm run build:i18n
+npm run test
+npm run extract-i18n
+```
 
-## Running unit tests
+## Desarrollo con Docker
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+Desde la raíz del monorepo:
 
-## Running end-to-end tests
+```bash
+docker compose -f docker/dev/docker-compose.yml up -d client-es client-en
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Configuración de entornos locales
 
-## Further help
+- ES: `ng serve --configuration=es-AR --port 4200`
+- EN: `ng serve --configuration=en --port 4201`
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Integración con backend
+
+El cliente consume la API principal (`api-indec`) en desarrollo, por lo que se recomienda levantar también:
+
+```bash
+docker compose -f docker/dev/docker-compose.yml up -d api-indec
+```
